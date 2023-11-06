@@ -1,6 +1,173 @@
 [profile.default]
-src = "src"
-out = "out"
-libs = ["lib"]
+# The source directory
+src = 'src'
+# The test directory
+test = 'test'
+# The script directory
+script = 'script'
+# The artifact directory
+out = 'out'
+# A list of paths to look for libraries in
+libs = ['lib']
+# A list of remappings
+remappings = []
+# Whether to autodetect remappings by scanning the `libs` folders recursively
+auto_detect_remappings = true
+# Whether to cache builds or not
+cache = true
+# The cache directory if enabled
+cache_path = 'cache'
+# Where the broadcast logs are stored
+broadcast = 'broadcast'
+# Whether to ignore the cache
+force = false
+# The EVM version by hardfork name
+evm_version = 'london'
+# A list of contracts to output gas reports for
+gas_reports = ['*']
+# A list of contracts to ignore for gas reports
+gas_reports_ignore = []
+# Override the Solidity version (this overrides `auto_detect_solc`)
+solc_version = '0.8.21'
+# Whether or not Forge should auto-detect the solc version to use
+auto_detect_solc = true
+# Disables downloading missing solc versions
+offline = false
+# Enables or disables the optimizer
+optimizer = true
+# The number of optimizer runs
+optimizer_runs = 20000
+# The verbosity of tests
+verbosity = 3
+# A list of ignored solc error codes
+ignored_error_codes = [1878, 5574]
+# Whether contract build warnings will cause compilation to fail
+deny_warnings = false
+# Configures the permissions of cheat codes that touch the file system
+fs_permissions = []
+# Whether to emit additional build info files
+build_info = false
+# Whether or not to enable `vm.ffi`
+ffi = false
+# The address of `msg.sender` in tests
+sender = '0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38'
+# The address of `tx.origin` in tests
+tx_origin = '0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38'
+# The initial balance of the test contract
+initial_balance = '0xffffffffffffffffffffffff'
+# The chain ID we are on in tests
+chain_id = 31337
+# The `block.number` value during EVM execution
+block_number = 1
+# The gas limit in tests
+gas_limit = 9223372036854775807
+# The gas price in tests (in wei)
+gas_price = 0
+# The block basefee in tests (in wei)
+block_base_fee_per_gas = 0
+# The address of `block.coinbase` in tests
+block_coinbase = '0x0000000000000000000000000000000000000000'
+# The block timestamp in tests
+block_timestamp = 1
+# The block difficulty in tests
+block_difficulty = 0
+# The memory limit of the EVM (32 MB by default)
+memory_limit = 33554432
+# Extra output to include in the contract's artifact.
+extra_output = []
+# Extra output to write to separate files.
+extra_output_files = []
+# Print the names of the compiled contracts
+names = false
+# Print the sizes of the compiled contracts
+sizes = false
+# Whether or not to use the Yul intermediate representation compilation pipeline
+via_ir = true
+# Enables or disables RPC caching when forking
+no_storage_caching = false
+# Use the given hash method for the metadata hash that is appended
+# to the bytecode.
+# The metadata hash can be removed from the bytecode by setting "none"
+bytecode_hash = "ipfs"
+# How to treat revert (and require) reason strings
+revert_strings = "default"
+# If enabled, the Solidity compiler is instructed to generate bytecode
+# only for the required contracts. This can reduce compile time
+# for `forge test`, but is experimental.
+sparse_mode = false
+# Contains alias -> URL|Env pairs for RPC endpoints that can be accessed during testing
+rpc_endpoints = { optimism = "https://optimism.alchemyapi.io/v2/...", mainnet = "${RPC_MAINNET}" }
+# The Solc instance to use if any.
+# This takes precedence over `auto_detect_solc`, if a version is set then this overrides auto-detection.
+#solc = None
+# Switch optimizer components on or off in detail
+#optimizer_details = None
+# Model checker settings.
+#model_checker = None,
+# Url of the rpc server that should be used for any rpc calls
+#eth_rpc_url = None
+# Etherscan API key
+#etherscan_api_key = None
+# Only run test functions matching the specified regex pattern
+#test_pattern = None
+# Only run test functions that do not match the specified regex pattern
+#test_pattern_inverse = None
+# Only run tests in contracts matching the specified regex pattern
+#contract_pattern = None
+# Only run tests in contracts that do not match the specified regex pattern
+#contract_pattern_inverse = None
+# Only run tests in source files matching the specified glob pattern
+#path_pattern = None
+# Only run tests in source files that do not match the specified glob pattern
+#path_pattern_inverse = None
+# Pins the block number for the state fork
+#fork_block_number = None
+# The block gas limit
+#block_gas_limit = None
+# The path to the `build-info` directory that contains the build info json files
+#build_info_path = None
 
-# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+[fmt]
+# Maximum line length where formatter will try to wrap the line
+line_length = 120
+# Number of spaces per indentation level
+tab_width = 4
+# Print spaces between brackets
+bracket_spacing = false
+# Style of uint/int256 types
+int_types = "long"
+# If function parameters are multiline then always put the function attributes on separate lines
+func_attrs_with_params_multiline = true
+# Style of quotation marks
+quote_style = "double"
+# Style of underscores in number literals
+number_underscore = "preserve"
+
+[fuzz]
+# The number of fuzz runs for fuzz tests
+runs = 257
+# The maximum number of test case rejections allowed by proptest, to be
+# encountered during usage of `vm.assume` cheatcode. This will be used
+# to set the `max_global_rejects` value in proptest test runner config.
+# `max_local_rejects` option isn't exposed here since we're not using
+# `prop_filter`.
+max_test_rejects = 65536
+# The weight of the dictionary
+dictionary_weight = 40
+# The flag indicating whether to include values from storage
+include_storage = true
+# The flag indicating whether to include push bytes values
+include_push_bytes = true
+
+[invariant]
+# The number of runs that must execute for each invariant test group
+runs = 256
+# The number of calls executed to attempt to break invariants in one run
+depth = 15
+# Fails the invariant fuzzing if a revert occurs
+fail_on_revert = false
+# Allows overriding an unsafe external call when running invariant tests. eg. reentrancy checks
+call_override = false
+# The weight of the dictionary
+dictionary_weight = 80
+# The flag indicating whether to include values from storage
