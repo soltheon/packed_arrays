@@ -31,6 +31,35 @@ contract PackedAddressArrayTest is Test {
         console.log("gas used - 20 bytes", gasBefore - gasleft());
     }
 
+    function test_fuzz_push_get(address a, address b, address c) public {
+        arr.push(a);
+        arr.push(b);
+        arr.push(c);
+        assertEq(arr.get(0), a);
+        assertEq(arr.get(1), b);
+        assertEq(arr.get(2), c);
+    }
+
+    function test_gas_details() public {
+        uint gasBefore = gasleft();
+        // do the above but in a loop
+        uint iterations = 8;
+        // TODO: this breaks after 8
+        for (uint i = 0; i < iterations; i++) {
+            gasBefore = gasleft();
+            arr.push(address(0x01));
+            console.log("push address number ", i, gasBefore - gasleft());
+        }
+
+        for (uint i = 0; i < iterations; i++) {
+            gasBefore = gasleft();
+            arr.get(i);
+            console.log("get address number ", i, gasBefore - gasleft());
+        }
+        console.log("get 1 address", gasBefore - gasleft());
+
+    }
+
     function test_packs_addresses_correctly() public {
         arr.push(address(type(uint160).max));
         arr.push(address(type(uint160).max - 1));
