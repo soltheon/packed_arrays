@@ -2,14 +2,13 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../src/PackedArray.sol";
+import "../src/PackedArrayYul.sol";
 
 contract PackedAddressArrayTest is Test {
     using PackedAddressArray for PackedAddressArray.Array;
 
     PackedAddressArray.Array internal arr;
 
-    uint160[] internal arr2;
     address[] internal addrArr;
 
     function test_compare_gas() public {
@@ -20,7 +19,7 @@ contract PackedAddressArrayTest is Test {
         address a = addrArr[0];
         address b = addrArr[1];
         address c = addrArr[2];
-        console.log("gas used - 20 bytes", gasBefore - gasleft());
+        console.log("gas used not packed - 20 bytes", gasBefore - gasleft());
         gasBefore = gasleft();
         arr.push(address(0x01));
         arr.push(address(0x02));
@@ -28,7 +27,7 @@ contract PackedAddressArrayTest is Test {
         address aa = arr.get(0);
         address bb = arr.get(1);
         address cc = arr.get(2);
-        console.log("gas used - 20 bytes", gasBefore - gasleft());
+        console.log("gas used packed array - 20 bytes", gasBefore - gasleft());
     }
 
     function test_fuzz_push_get(address a, address b, address c) public {
@@ -41,23 +40,22 @@ contract PackedAddressArrayTest is Test {
     }
 
     function test_gas_details() public {
-        uint gasBefore = gasleft();
+        uint256 gasBefore = gasleft();
         // do the above but in a loop
-        uint iterations = 8;
+        uint256 iterations = 11;
         // TODO: this breaks after 8
-        for (uint i = 0; i < iterations; i++) {
+        for (uint256 i = 0; i < iterations; i++) {
             gasBefore = gasleft();
-            arr.push(address(0x01));
+            arr.push(address(0x0000111122223333444455556666777788889999));
             console.log("push address number ", i, gasBefore - gasleft());
         }
 
-        for (uint i = 0; i < iterations; i++) {
+        for (uint256 i = 0; i < iterations; i++) {
             gasBefore = gasleft();
             arr.get(i);
             console.log("get address number ", i, gasBefore - gasleft());
         }
         console.log("get 1 address", gasBefore - gasleft());
-
     }
 
     function test_packs_addresses_correctly() public {
