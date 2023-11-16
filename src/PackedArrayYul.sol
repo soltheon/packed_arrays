@@ -15,8 +15,10 @@ library PackedAddressArray {
             let slotIndex := div(totalBitsUsed, 256)
             let offset := mod(totalBitsUsed, 256)
 
-            mstore(0x00, arr.slot)
-            let storageSlot := keccak256(0x00, 0x20)
+            // Calculate storage spot for array
+            let freeMemPtr := mload(0x40)
+            mstore(freeMemPtr, arr.slot)
+            let storageSlot := keccak256(freeMemPtr, 0x20)
             let arraySlot := add(storageSlot, slotIndex)
 
             switch gt(offset, 96)
@@ -27,38 +29,59 @@ library PackedAddressArray {
                 sstore(add(arraySlot, 1), shl(sub(256, sliceLength), value))
             }
             default {
-                // If the offset is less than 96, we can fit the whole address in the slots
+                // If the offset is less than 96, we can fit the whole address in the slot
                 sstore(arraySlot, or(sload(arraySlot), shl(sub(96, offset), value)))
             }
-
+            // Increment array
             sstore(arr.slot, add(sload(arr.slot), 1)) // increment array length
         }
     }
 
-    function pop(Array storage arr) internal returns (address addr) {
-        require(arr.slots.length > 1, "Array is empty");
-        // get total number of items
-        uint256 numItems = arr.slots[0];
+    function pop(Array storage arr) internal {
+        uint numItems = arr.slots.length;
+        require(numItems > 0, "Array is empty");
 
-        // Each address takes up 160 bits. We can fit 1 whole address in each slot,
-        // and a part of the next address if there's space.
-        uint256 totalBitsUsed = numItems * 160;
-        uint256 slotIndex = totalBitsUsed / 256 + 1;
-        uint256 offset = totalBitsUsed % 256; // The start position of the next address to be stored
+        assembly {
 
-        if (offset <= 96) {
-            // If the offset is less than 96, we can delete the whole slot
-            addr = address(uint160(arr.slots[slotIndex] << (96 - offset)));
-            delete arr.slots[slotIndex];
-        } else {
-            // If the offset is greater than 96, we need to delete the address accross multiple slots
-            /*
-                uint256 sliceLength = 160 - (256 - offset);
-                arr.slots[slotIndex] |= val >> sliceLength;
-                arr.slots.push(val << (256 - sliceLength));
-                */
+            let totalBitsUsed := mul(numItems, 160)
+            let slotIndex := div(totalBitsUsed, 256)
+            let offset := mod(totalBitsUsed, 256)
+            
+            // Calculate storage spot for array
+            let freeMemPtr := mload(0x40)
+            mstore(freeMemPtr, arr.slot)
+            let storageSlot := keccak256(freeMemPtr, 0x20)
+            let arraySlot := add(storageSlot, slotIndex)
+
+            switch gt(offset, 159)
+            case 1 {
+                // If offset is greater than 160, a whole address should exist here
+                let rawSlotValue := sload(arraySlot)
+
+                // trim the last address + padding
+                let sliceLength := add(160, sub(256, offset))
+                let newValue := shl(sliceLength, shr(sliceLength, rawSlotValue))
+                sstore(arraySlot, newValue)
+            }
+            default {
+                // The address to pop exists across two slots
+                
+                // The second slot can be zeroed out since nothing else should be there
+                sstore(arraySlot, 0)
+
+                let decrementedArraySlot := sub(arraySlot, 1)
+                let RawSlotValue := sload(decrementedArraySlot)
+
+                // Number of bits to trim off end of this slot
+                let sliceLength := sub(160, offset)
+                let newValue := shl(sliceLength, shr(sliceLength, RawSlotValue))
+                sstore(decrementedArraySlot, newValue)
+
+            }
+            // Decrement array length
+            sstore(arr.slot, sub(numItems, 1))
         }
-    }
+   }
 
     function get(Array storage arr, uint256 index) internal view returns (address addr) {
         require(index < arr.slots.length, "Index out of bounds");
@@ -68,20 +91,23 @@ library PackedAddressArray {
             let startSlot := div(bitStart, 256)
             let offset := mod(bitStart, 256)
 
-            mstore(0x00, arr.slot)
-            let storageSlot := keccak256(0x00, 0x20)
+            // Calculate storage spot for array
+            let freeMemPtr := mload(0x40)
+            mstore(freeMemPtr, arr.slot)
+            let storageSlot := keccak256(freeMemPtr, 0x20)
             let storageSlotIndex := add(storageSlot, startSlot)
 
             switch gt(offset, 96)
             case 1 {
-                // If the offset is greater than 96, we need to split the address across two slots
-                let bitsInSecondSlot := sub(160, sub(256, offset))
-                let highBits := shr(sub(offset, bitsInSecondSlot), shl(offset, sload(storageSlotIndex)))
-                let lowBits := shr(sub(256, bitsInSecondSlot), sload(add(storageSlotIndex, 1)))
+                // If the offset is greater than 96, we need to get the address across two slots
+                let sliceLength := sub(160, sub(256, offset))
+                // Trim off 'offset' number of bits and 
+                let highBits := shr(sub(offset, sliceLength), shl(offset, sload(storageSlotIndex)))
+                let lowBits := shr(sub(256, sliceLength), sload(add(storageSlotIndex, 1)))
                 addr := or(highBits, lowBits)
             }
             default {
-                // If the offset is less than 96, we can fit the whole address in the slots
+                // If the offset is less than 96 the address is in this slot alone
                 addr := shr(sub(96, offset), sload(storageSlotIndex))
             }
         }
