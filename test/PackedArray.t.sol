@@ -11,12 +11,51 @@ contract PackedAddressArrayTest is Test {
 
     address[] internal addrArr;
 
+    function test_fuzz_get_many(address[50] calldata array, uint from, uint to) public {
+        vm.assume(from < to);
+        vm.assume(to <= array.length);
+
+        for (uint256 i = 0; i < array.length; i++) {
+            arr.push(array[i]);
+        }
+        address[] memory addrs = arr.getMany(from, to);
+        console.log("addrs length", addrs.length);
+
+        for (uint256 i = 0; i < addrs.length; i++) {
+            assertEq(addrs[i], array[from + i]);
+        }
+    }
+
+    function test_gas_get_many() public {
+        for (uint256 i = 0; i < 20; i++) {
+            arr.push(address(uint160(uint256(keccak256(abi.encodePacked(i))))));
+        }
+
+        address[] memory array = new address[](20);
+        uint gas1 = gasleft();
+        for (uint256 i = 0; i < array.length; i++) {
+            array[i] = arr.get(i);
+        }
+        console.log("gas used get", gas1 - gasleft());
+
+        uint gas2 = gasleft();
+        address[] memory addrs = arr.getMany(0, array.length - 1);
+        console.log("gas used getMany", gas2 - gasleft());
+
+        for (uint256 i = 0; i < addrs.length; i++) {
+            assertEq(addrs[i], array[i]);
+        }
+
+    }
+
+
+
     function test_pop_empty() public {
         vm.expectRevert("Array is empty");
         arr.pop();
     }
 
-    function test_pop_works() public {
+    function test_pop_functionality() public {
 
         arr.push(address(0xCAFE));
         arr.push(address(0xBEEF));
@@ -70,6 +109,7 @@ contract PackedAddressArrayTest is Test {
     }
 
     function test_compare_gas() public {
+        // regular array
         uint256 gasBefore = gasleft();
         addrArr.push(address(0xCAFE));
         addrArr.push(address(0xBEEF));
@@ -85,6 +125,7 @@ contract PackedAddressArrayTest is Test {
         assertEq(bb, address(0xBEEF));
         assertEq(cc, address(0xDECAF));
 
+        // packed array
         gasBefore = gasleft();
         arr.push(address(0x0000111122223333444455556666777788889999));
         arr.push(address(0x9999888877776666555544443333222211110000));

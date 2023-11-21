@@ -8,6 +8,69 @@ library PackedAddressArray {
         uint256[] slots;
     }
 
+    function getMany(Array storage arr, uint256 fromIndex, uint256 toIndex) internal view returns (address[] memory addrs) {
+        uint arrayLength = arr.slots.length;
+        require(toIndex <= arrayLength, "Index out of bounds");
+        require(fromIndex < toIndex, "Invalid index range");
+
+        assembly {
+            // for loop
+            let i := fromIndex
+            let numItems := sub(toIndex, fromIndex) 
+            let bitsAtStart := mul(i, 160)
+            let startSlot := div(bitsAtStart, 256)
+            let offset := mod(bitsAtStart, 256)
+
+            
+ 
+            // Allocate memory for the arrayLength
+            mstore(addrs, numItems)
+            let freeMemPtr := mload(0x40)
+            let arrayEnd := add(addrs, mul(numItems, 32))
+            // set free memory to end of array
+            mstore(0x40, add(arrayEnd, 32))           
+
+
+            // Calculate storage spot for arrayLength
+            mstore(0x00, arr.slot)
+            let storageSlot := keccak256(0x00, 0x20)
+            let storageSlotIndex := add(storageSlot, startSlot)
+
+            // Cache beginning of array
+            let arrayPtr := addrs
+            // Cache raw slot value to avoid multiple sloads
+            let cachedStorageValue := sload(storageSlotIndex)
+
+            for { } lt(i, toIndex) { i := add(i, 1) } {
+                arrayPtr := add(arrayPtr, 32)
+                switch gt(offset, 96)
+                    // If the offset is greater than 96, we need to get the address across two slots
+                case 1 {
+                    let sliceLength := sub(160, sub(256, offset))
+                    // Slice end of address from previous slot
+                    let highBits := shr(sub(offset, sliceLength), shl(offset, cachedStorageValue))
+                    // Move to next slot and grab the rest of the address
+                    storageSlotIndex := add(storageSlotIndex, 1)
+                    cachedStorageValue := sload(storageSlotIndex)
+                    let lowBits := shr(sub(256, sliceLength), cachedStorageValue)
+                    mstore(arrayPtr, or(highBits, lowBits))
+
+                }
+                // If the offset is less than 96 the address is fully in this slot
+                default {
+                    mstore(arrayPtr, shr(sub(96, offset), cachedStorageValue))
+                }
+
+                    offset := mod(add(offset, 160), 256)
+
+                    if iszero(offset){
+                        storageSlotIndex := add(storageSlotIndex, 1)
+                        cachedStorageValue := sload(storageSlotIndex)
+                    }
+            }
+        }
+    }
+
     function push(Array storage arr, address value) internal {
         assembly {
             let numItems := sload(arr.slot)
@@ -16,9 +79,8 @@ library PackedAddressArray {
             let offset := mod(totalBitsUsed, 256)
 
             // Calculate storage spot for array
-            let freeMemPtr := mload(0x40)
-            mstore(freeMemPtr, arr.slot)
-            let storageSlot := keccak256(freeMemPtr, 0x20)
+            mstore(0x0, arr.slot)
+            let storageSlot := keccak256(0x0, 0x20)
             let arraySlot := add(storageSlot, slotIndex)
 
             switch gt(offset, 96)
@@ -48,14 +110,13 @@ library PackedAddressArray {
             let offset := mod(totalBitsUsed, 256)
             
             // Calculate storage spot for array
-            let freeMemPtr := mload(0x40)
-            mstore(freeMemPtr, arr.slot)
-            let storageSlot := keccak256(freeMemPtr, 0x20)
+            mstore(0x0, arr.slot)
+            let storageSlot := keccak256(0x0, 0x20)
             let arraySlot := add(storageSlot, slotIndex)
 
             switch gt(offset, 159)
             case 1 {
-                // If offset is greater than 160, a whole address should exist here
+                // If offset is greater than 159, the whole address should exist here
                 let rawSlotValue := sload(arraySlot)
 
                 // trim the last address + padding
@@ -92,9 +153,8 @@ library PackedAddressArray {
             let offset := mod(bitStart, 256)
 
             // Calculate storage spot for array
-            let freeMemPtr := mload(0x40)
-            mstore(freeMemPtr, arr.slot)
-            let storageSlot := keccak256(freeMemPtr, 0x20)
+            mstore(0x0, arr.slot)
+            let storageSlot := keccak256(0x0, 0x20)
             let storageSlotIndex := add(storageSlot, startSlot)
 
             switch gt(offset, 96)
