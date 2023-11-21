@@ -2,22 +2,60 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "../src/PackedArrayYul.sol";
+import "../src/PackedArray.sol";
 
 contract PackedAddressArrayTest is Test {
     using PackedAddressArray for PackedAddressArray.Array;
 
     PackedAddressArray.Array internal arr;
 
-    address[] internal addrArr;
+    function test_set_debug() public {
+        address a = address(type(uint160).max);
+        address b = address(0xFF << 80);
+        for (uint256 i = 0; i < 10; i++) {
+            arr.push(a);
+        }
+        for (uint256 i = 0; i < 10; i++) {
+            console.logBytes32(bytes32(arr.slots[i]));
+        }
+        for (uint256 i = 0; i < 10; i++) {
+            arr.set(i, address(b));
+            assertEq(arr.get(i), address(b));
+        }
+        for (uint256 i = 0; i < 10; i++) {
+            console.logBytes32(bytes32(arr.slots[i]));
+        }
+    }
 
-    function test_fuzz_get_many(address[50] calldata array, uint from, uint to) public {
-        vm.assume(from < to);
-        vm.assume(to <= array.length);
+    function test_fuzz_set(address[20] calldata addrsA, address[20] calldata addrsB) public {
+        for (uint256 i = 0; i < addrsA.length; i++) {
+            arr.push(addrsA[i]);
+        }
 
+        for (uint256 i = 0; i < addrsB.length; i++) {
+            // console.log("set", i, addrsA[i], addrsB[i]);
+            arr.set(i, addrsB[i]);
+            // console.log("get", i, arr.get(i));
+            assertEq(arr.get(i), addrsB[i]);
+        }
+
+        for (uint256 i = 0; i < addrsA.length; i++) {
+            arr.set(i, addrsA[i]);
+            assertEq(arr.get(i), addrsA[i]);
+        }
+    }
+
+    function test_fuzz_get_many(address[50] calldata array, uint256 from, uint256 to) public {
         for (uint256 i = 0; i < array.length; i++) {
             arr.push(array[i]);
         }
+
+        if (to > array.length) {
+            vm.expectRevert(PackedAddressArray.IndexOutOfBounds.selector);
+        } else if (from >= to) {
+            vm.expectRevert(PackedAddressArray.InvalidIndexRange.selector);
+        }
+
         address[] memory addrs = arr.getMany(from, to);
         console.log("addrs length", addrs.length);
 
@@ -26,43 +64,18 @@ contract PackedAddressArrayTest is Test {
         }
     }
 
-    function test_gas_get_many() public {
-        for (uint256 i = 0; i < 20; i++) {
-            arr.push(address(uint160(uint256(keccak256(abi.encodePacked(i))))));
-        }
-
-        address[] memory array = new address[](20);
-        uint gas1 = gasleft();
-        for (uint256 i = 0; i < array.length; i++) {
-            array[i] = arr.get(i);
-        }
-        console.log("gas used get", gas1 - gasleft());
-
-        uint gas2 = gasleft();
-        address[] memory addrs = arr.getMany(0, array.length - 1);
-        console.log("gas used getMany", gas2 - gasleft());
-
-        for (uint256 i = 0; i < addrs.length; i++) {
-            assertEq(addrs[i], array[i]);
-        }
-
-    }
-
-
-
     function test_pop_empty() public {
-        vm.expectRevert("Array is empty");
+        vm.expectRevert(PackedAddressArray.PopEmptyArray.selector);
         arr.pop();
     }
 
     function test_pop_functionality() public {
-
         arr.push(address(0xCAFE));
         arr.push(address(0xBEEF));
         arr.pop();
         assertEq(arr.slots.length, 1);
 
-        vm.expectRevert("Index out of bounds");
+        vm.expectRevert(PackedAddressArray.IndexOutOfBounds.selector);
         arr.get(1);
     }
 
@@ -80,6 +93,7 @@ contract PackedAddressArrayTest is Test {
     function test_push_pop(address[69] calldata addrs) public {
         for (uint256 i = 0; i < addrs.length; i++) {
             arr.push(addrs[i]);
+            assertEq(addrs[i], arr.get(i));
         }
         assertEq(arr.slots.length, addrs.length);
 
@@ -106,71 +120,5 @@ contract PackedAddressArrayTest is Test {
         for (uint256 i = 0; i < addrs.length; i++) {
             assertEq(arr.get(i), addrs[i]);
         }
-    }
-
-    function test_compare_gas() public {
-        // regular array
-        uint256 gasBefore = gasleft();
-        addrArr.push(address(0xCAFE));
-        addrArr.push(address(0xBEEF));
-        addrArr.push(address(0xDECAF));
-        address aa = addrArr[0];
-        address bb = addrArr[1];
-        address cc = addrArr[2];
-        addrArr.pop();
-        addrArr.pop();
-        addrArr.pop();
-        console.log("gas used 3 addresses not packed - 20 bytes", gasBefore - gasleft());
-        assertEq(aa, address(0xCAFE));
-        assertEq(bb, address(0xBEEF));
-        assertEq(cc, address(0xDECAF));
-
-        // packed array
-        gasBefore = gasleft();
-        arr.push(address(0x0000111122223333444455556666777788889999));
-        arr.push(address(0x9999888877776666555544443333222211110000));
-        arr.push(address(0x0000111122223333444455556666777788889999));
-        address a = arr.get(0);
-        address b = arr.get(1);
-        address c = arr.get(2);
-        arr.pop();
-        arr.pop();
-        arr.pop();
-        console.log("gas used 3 addresses packed array - 20 bytes", gasBefore - gasleft());
-        assertEq(a, address(0x0000111122223333444455556666777788889999));
-        assertEq(b, address(0x9999888877776666555544443333222211110000));
-        assertEq(c, address(0x0000111122223333444455556666777788889999));
-    }
-
-
-    function test_gas_push_get() public {
-        uint256 gasBefore = gasleft();
-        // do the above but in a loop
-        uint256 iterations = 50;
-
-        gasBefore = gasleft();
-        for (uint256 i = 0; i < iterations;) {
-            arr.push(address(0x0000111122223333444455556666777788889999));
-            unchecked {
-                i++;
-            }
-        }
-        console.log("push ", iterations, " addresses gas: ", gasBefore - gasleft());
-
-        gasBefore = gasleft();
-        for (uint256 i = 0; i < iterations;) {
-            arr.get(i);
-            unchecked {
-                i++;
-            }
-        }
-        console.log("get ", iterations, "addresses gas: ", gasBefore - gasleft());
-
-        gasBefore = gasleft();
-        arr.push(address(0xCAFE));
-        console.log("push 1 address gas: ", gasBefore - gasleft());
-        gasBefore = gasleft();
-        arr.get(0);
-        console.log("get 1 address gas: ", gasBefore - gasleft());
     }
 }
