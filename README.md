@@ -49,7 +49,7 @@ Declare the type in storage
 ```
 **Slice**: Fetch multiple addresses into memory
 ```solidity
-    address[] memory addrs = array.get(0, addresses.length);
+    address[] memory addrs = array.slice(0, addresses.length);
 ```
 
 ## Gas Comparison
@@ -58,8 +58,8 @@ The following operations are tested against using a regular address array in sol
 
 | Operation          | Normal Array | Packed Array | Percentage |
 |--------------------|--------------|--------------|------------|
-| Batch store 50     | 1,151,753    | 739,635      | -35.78%    |
-| Batch retrieve 50  | 25,853       | 13,312       | -48.51%    |
+| Batch append 50    | 1,151,753    | 739,635      | -35.78%    |
+| Batch slice 50     | 25,853       | 13,312       | -48.51%    |
 | Set, Get, Edit 50  | 1,179,545    | 823,333      | -30.19%    |
 | Set, Get, Edit 5   | 138,275      | 120,563      | -12.81%    |
 | Set, Get, Edit 1   | 45,626       | 46,232       | +1.33%     |
