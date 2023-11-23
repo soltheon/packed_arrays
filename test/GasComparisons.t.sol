@@ -86,7 +86,7 @@ contract PackedAddressArrayTest is Test {
             uint256 gas1 = gasleft();
             for (uint256 i = 0; i < 50; i++) {
                 arr.push(a);
-                a = arr.get(0);
+                a = arr.get(i);
                 arr.set(i, b);
             }
             console.log("gas packed array: push/set/get ", gas1 - gasleft());
@@ -96,6 +96,26 @@ contract PackedAddressArrayTest is Test {
             }
             console.log("gas packed array: pop", gas1 - gasleft());
         }
+    }
+
+    function test_gas_set_many() public {
+        // set up array
+        uint256 numberOfAddrs = 50;
+        address[] memory normalArray = new address[](numberOfAddrs);
+        for (uint256 i = 0; i < normalArray.length; i++) {
+            address addr = address(uint160(uint256(keccak256(abi.encodePacked(i)))));
+            normalArray[i] = addr;
+        }
+
+        uint gasBefore = gasleft();
+        for (uint256 i = 0; i < normalArray.length; i++) {
+            addrArr.push(normalArray[i]);
+        }
+        console.log("gas used normal address array: ", gasBefore - gasleft());
+
+        uint gasBefore2 = gasleft();
+        arr.append(normalArray);
+        console.log("gas used packed address array: ", gasBefore2 - gasleft());
     }
 
     function test_gas_get_many_packed() public {
