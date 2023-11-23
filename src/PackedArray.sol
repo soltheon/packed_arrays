@@ -3,16 +3,16 @@ pragma solidity >=0.8.21;
 
 import "forge-std/Test.sol";
 
-library PackedAddressArray {
+library PackedArray {
     error IndexOutOfBounds();
     error InvalidIndexRange();
     error PopEmptyArray();
 
-    struct Array {
+    struct Addresses {
         uint256[] slots;
     }
 
-    function append(Array storage arr, address[] memory addrs) internal {
+    function append(Addresses storage arr, address[] memory addrs) internal {
         assembly {
             let arrayLen := sload(arr.slot)
 
@@ -63,7 +63,7 @@ library PackedAddressArray {
     }
 
     // Gets addresses starting at fromIndex..toIndex (does not include toIndex)
-    function getMany(Array storage arr, uint256 fromIndex, uint256 toIndex)
+    function get(Addresses storage arr, uint256 fromIndex, uint256 toIndex)
         internal
         view
         returns (address[] memory addrs)
@@ -134,7 +134,7 @@ library PackedAddressArray {
     }
 
     // Push an address into the array
-    function push(Array storage arr, address value) internal {
+    function push(Addresses storage arr, address value) internal {
         assembly {
             let numItems := sload(arr.slot)
             let totalBitsUsed := mul(numItems, 160)
@@ -163,7 +163,7 @@ library PackedAddressArray {
     }
 
     // Remove last address from array and decrement length
-    function pop(Array storage arr) internal {
+    function pop(Addresses storage arr) internal {
         assembly {
             // Calculate storage spot for array
             mstore(0x0, arr.slot)
@@ -211,7 +211,7 @@ library PackedAddressArray {
     }
 
     // Replace an addres in the array with new address value
-    function set(Array storage arr, uint256 index, address value) internal {
+    function set(Addresses storage arr, uint256 index, address value) internal {
         assembly {
             let length := sload(arr.slot)
 
@@ -254,7 +254,7 @@ library PackedAddressArray {
     }
 
     // Get an address from the array
-    function get(Array storage arr, uint256 index) internal view returns (address addr) {
+    function get(Addresses storage arr, uint256 index) internal view returns (address addr) {
         assembly {
             let length := sload(arr.slot)
 

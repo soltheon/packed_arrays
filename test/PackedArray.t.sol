@@ -4,10 +4,10 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/PackedArray.sol";
 
-contract PackedAddressArrayTest is Test {
-    using PackedAddressArray for PackedAddressArray.Array;
+contract PackedAddressTest is Test {
+    using PackedArray for PackedArray.Addresses;
 
-    PackedAddressArray.Array internal arr;
+    PackedArray.Addresses internal arr;
 
     function test_append_empty() public {
         address[] memory addrs = new address[](8);
@@ -72,7 +72,7 @@ contract PackedAddressArrayTest is Test {
         assertEq(_addrs.length, addrs.length);
 
         // Get all zero addresses
-        address[] memory zeroAddrs = arr.getMany(0, addrs.length);
+        address[] memory zeroAddrs = arr.get(0, addrs.length);
         assertEq(zeroAddrs.length, addrs.length);
         assertEq(arr.slots.length, addrs.length);
 
@@ -82,9 +82,9 @@ contract PackedAddressArrayTest is Test {
         // Remove all addresses
         for (uint256 i = 0; i < addrs.length; i++) {
             arr.pop();
-            console.log("pop length now", arr.slots.length);
         }
-        vm.expectRevert(PackedAddressArray.PopEmptyArray.selector);
+
+        vm.expectRevert(PackedArray.PopEmptyArray.selector);
         arr.pop();
         assertEq(arr.slots.length, 0);
 
@@ -127,14 +127,8 @@ contract PackedAddressArrayTest is Test {
             arr.push(a);
         }
         for (uint256 i = 0; i < 10; i++) {
-            console.logBytes32(bytes32(arr.slots[i]));
-        }
-        for (uint256 i = 0; i < 10; i++) {
             arr.set(i, address(b));
             assertEq(arr.get(i), address(b));
-        }
-        for (uint256 i = 0; i < 10; i++) {
-            console.logBytes32(bytes32(arr.slots[i]));
         }
     }
 
@@ -144,9 +138,7 @@ contract PackedAddressArrayTest is Test {
         }
 
         for (uint256 i = 0; i < addrsB.length; i++) {
-            // console.log("set", i, addrsA[i], addrsB[i]);
             arr.set(i, addrsB[i]);
-            // console.log("get", i, arr.get(i));
             assertEq(arr.get(i), addrsB[i]);
         }
 
@@ -162,12 +154,12 @@ contract PackedAddressArrayTest is Test {
         }
 
         if (to > array.length) {
-            vm.expectRevert(PackedAddressArray.IndexOutOfBounds.selector);
+            vm.expectRevert(PackedArray.IndexOutOfBounds.selector);
         } else if (from >= to) {
-            vm.expectRevert(PackedAddressArray.InvalidIndexRange.selector);
+            vm.expectRevert(PackedArray.InvalidIndexRange.selector);
         }
 
-        address[] memory addrs = arr.getMany(from, to);
+        address[] memory addrs = arr.get(from, to);
         assertEq(addrs.length, to - from);
 
         for (uint256 i = 0; i < addrs.length; i++) {
@@ -177,17 +169,17 @@ contract PackedAddressArrayTest is Test {
 
     function test_get_many_correct_amount() public {
         arr.push(address(0xCAFE));
-        address[] memory addrs = arr.getMany(0, 1);
+        address[] memory addrs = arr.get(0, 1);
         assertEq(addrs.length, 1);
         arr.push(address(0));
-        addrs = arr.getMany(0, 2);
+        addrs = arr.get(0, 2);
         assertEq(addrs.length, 2);
-        addrs = arr.getMany(0, 1);
+        addrs = arr.get(0, 1);
         assertEq(addrs.length, 1);
     }
 
     function test_pop_empty() public {
-        vm.expectRevert(PackedAddressArray.PopEmptyArray.selector);
+        vm.expectRevert(PackedArray.PopEmptyArray.selector);
         arr.pop();
     }
 
@@ -197,14 +189,13 @@ contract PackedAddressArrayTest is Test {
         arr.pop();
         assertEq(arr.slots.length, 1);
 
-        vm.expectRevert(PackedAddressArray.IndexOutOfBounds.selector);
+        vm.expectRevert(PackedArray.IndexOutOfBounds.selector);
         arr.get(1);
     }
 
     function test_pop_sequence() public {
         arr.push(address(0xCAFE));
         arr.push(address(0xDECAF));
-        console.log("address[1]", arr.get(1));
         assertEq(arr.get(1), address(0xDECAF));
         arr.pop();
         arr.pop();
