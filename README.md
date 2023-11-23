@@ -41,13 +41,13 @@ Declare the type in storage
     array.pop();
 ```
 
-**Append**: Store multiple addresses efficiently
+**Append**: Save multiple addresses from memory to storage
 ```solidity
     address[] memory addresses;
 
     array.append(addresses);
 ```
-**Get Many**: Fetch multiple addresses efficiently
+**Slice**: Fetch multiple addresses into memory
 ```solidity
     address[] memory addrs = array.get(0, addresses.length);
 ```

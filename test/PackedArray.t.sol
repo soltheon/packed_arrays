@@ -72,7 +72,7 @@ contract PackedAddressTest is Test {
         assertEq(_addrs.length, addrs.length);
 
         // Get all zero addresses
-        address[] memory zeroAddrs = arr.get(0, addrs.length);
+        address[] memory zeroAddrs = arr.slice(0, addrs.length);
         assertEq(zeroAddrs.length, addrs.length);
         assertEq(arr.slots.length, addrs.length);
 
@@ -159,7 +159,7 @@ contract PackedAddressTest is Test {
             vm.expectRevert(PackedArray.InvalidIndexRange.selector);
         }
 
-        address[] memory addrs = arr.get(from, to);
+        address[] memory addrs = arr.slice(from, to);
         assertEq(addrs.length, to - from);
 
         for (uint256 i = 0; i < addrs.length; i++) {
@@ -169,12 +169,12 @@ contract PackedAddressTest is Test {
 
     function test_get_many_correct_amount() public {
         arr.push(address(0xCAFE));
-        address[] memory addrs = arr.get(0, 1);
+        address[] memory addrs = arr.slice(0, 1);
         assertEq(addrs.length, 1);
         arr.push(address(0));
-        addrs = arr.get(0, 2);
+        addrs = arr.slice(0, 2);
         assertEq(addrs.length, 2);
-        addrs = arr.get(0, 1);
+        addrs = arr.slice(0, 1);
         assertEq(addrs.length, 1);
     }
 

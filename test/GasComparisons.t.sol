@@ -121,7 +121,6 @@ contract PackedAddressGasTest is Test {
         console.log("gas used packed address array: ", gasBefore2 - gasleft());
     }
 
-
     function test_gas_set_100() public {
         // set up array
         uint256 numberOfAddrs = 100;
@@ -141,9 +140,6 @@ contract PackedAddressGasTest is Test {
         arr.append(normalArray);
         console.log("gas used packed address array: ", gasBefore2 - gasleft());
     }
-
-
-
 
     function test_gas_get_100_packed() public {
         uint256 numberOfAddrs = 100;
@@ -169,7 +165,7 @@ contract PackedAddressGasTest is Test {
         console.log("gas used get", gas1 - gasleft());
 
         uint256 gas2 = gasleft();
-        address[] memory addrs = arr.get(0, array.length - 1);
+        address[] memory addrs = arr.slice(0, array.length - 1);
         console.log("gas used getMany", gas2 - gasleft());
 
         for (uint256 i = 0; i < addrs.length; i++) {
@@ -201,7 +197,7 @@ contract PackedAddressGasTest is Test {
         console.log("gas used get", gas1 - gasleft());
 
         uint256 gas2 = gasleft();
-        address[] memory addrs = arr.get(0, array.length - 1);
+        address[] memory addrs = arr.slice(0, array.length - 1);
         console.log("gas used getMany", gas2 - gasleft());
 
         for (uint256 i = 0; i < addrs.length; i++) {

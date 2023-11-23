@@ -63,7 +63,7 @@ library PackedArray {
     }
 
     // Gets addresses starting at fromIndex..toIndex (does not include toIndex)
-    function get(Addresses storage arr, uint256 fromIndex, uint256 toIndex)
+    function slice(Addresses storage arr, uint256 fromIndex, uint256 toIndex)
         internal
         view
         returns (address[] memory addrs)
