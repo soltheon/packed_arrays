@@ -36,7 +36,7 @@ offline = false
 # Enables or disables the optimizer
 optimizer = true
 # The number of optimizer runs
-optimizer_runs = 20000
+optimizer_runs = 2000000
 # The verbosity of tests
 verbosity = 3
 # A list of ignored solc error codes

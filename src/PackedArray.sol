@@ -232,23 +232,22 @@ library PackedArray {
             switch gt(offset, 96)
             // Need to replace address across two slots
             case 1 {
-                /*
-                let sliceLength := sub(160, sub(256, offset))
-                sstore(storageSlotIndex, or(and(sload(storageSlotIndex), shl(sub(256, sliceLength), value)), shr(sliceLength, value)))
-                sstore(add(storageSlotIndex, 1), shl(sub(256, sliceLength), value))
-                */
-
-                // TODO: how could this possibly be clearing the old bits?
-                let sliceLength := sub(160, sub(256, offset))
-                sstore(storageSlotIndex, or(sload(storageSlotIndex), shr(sliceLength, value)))
-                sstore(add(storageSlotIndex, 1), shl(sub(256, sliceLength), value))
+                // Remove lower bits from storage and store upper bits of new value
+                let sliceLength := sub(256, offset)
+                let cleanedSlot := shl(sliceLength, shr(sliceLength, sload(storageSlotIndex)))
+                let sliceRemainder := sub(160, sliceLength)
+                sstore(storageSlotIndex, or(cleanedSlot, shr(sliceRemainder, value)))
+                // Remove upper bits and store lower bits of new value
+                let nextStorageSlot := add(storageSlotIndex, 1)
+                cleanedSlot := shr(sliceRemainder, shl(sliceRemainder, sload(nextStorageSlot)))
+                sstore(nextStorageSlot, or(cleanedSlot, shl(sub(256, sliceRemainder), value)))
             }
             // If the offset is less than 96, we can fit the whole address in the slot
             default {
-                let sliceLength := sub(256, offset)
-                let cleanedSlot := shl(sliceLength, shr(sliceLength, sload(storageSlotIndex)))
-                let newValue := shl(sub(96, offset), value)
-                sstore(storageSlotIndex, or(cleanedSlot, newValue))
+                let sliceLength := sub(96, offset)
+                let addressMask := shl(sliceLength, 0xffffffffffffffffffffffffffffffffffffffff)
+                let cleanedSlot := and(sload(storageSlotIndex), not(addressMask))
+                sstore(storageSlotIndex, or(cleanedSlot, shl(sliceLength, value)))
             }
         }
     }

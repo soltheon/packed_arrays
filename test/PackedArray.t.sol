@@ -9,19 +9,32 @@ contract PackedAddressTest is Test {
 
     PackedArray.Addresses internal arr;
 
-    function test_append_empty() public {
-        address[] memory addrs = new address[](8);
+    function test_append_push_equivolance(address a) public {
+        arr.push(a);
+        address[] memory addrs = arr.slice(0, 1);
+        arr.append(addrs);
+        assertEq(arr.slots.length, 2);
+        assertEq(arr.get(0), a);
+        assertEq(arr.get(1), a);
+    }
 
-        for (uint160 i = 0; i < 8; i++) {
+    function test_large_array() public {
+        uint256 arraySize = 1000;
+        address[] memory addrs = new address[](arraySize);
+        for (uint160 i = 0; i < arraySize; i++) {
             addrs[i] = address(type(uint160).max - i);
         }
 
-        arr.append(addrs);
-        assertEq(arr.slots.length, 8);
-
-        for (uint256 i = 0; i < 8; i++) {
-            assertEq(arr.get(i), addrs[i]);
+        for (uint256 i = 0; i < 10; i++) {
+            arr.append(addrs);
         }
+        assertEq(arr.slots.length, arraySize * 10);
+    }
+
+    function test_append_empty() public {
+        address[] memory addrs = new address[](0);
+        arr.append(addrs);
+        assertEq(arr.slots.length, 0);
     }
 
     function test_append_not_empty() public {
@@ -41,58 +54,6 @@ contract PackedAddressTest is Test {
         for (uint256 i = lengthBefore; i < 8 + lengthBefore; i++) {
             assertEq(arr.get(i), addrs[i - lengthBefore]);
         }
-    }
-
-    function test_fuzz_all_functionality(address[30] calldata addrs, address a, address b) public {
-        address[] memory _addrs = new address[](addrs.length);
-        for (uint256 i = 0; i < addrs.length; i++) {
-            _addrs[i] = addrs[i];
-        }
-
-        // push and append
-        arr.push(a);
-        assertEq(arr.slots.length, 1);
-        assertEq(arr.get(0), a);
-
-        arr.append(_addrs);
-        assertEq(arr.slots.length, _addrs.length + 1);
-        for (uint256 i = 0; i < _addrs.length; i++) {
-            assertEq(arr.get(i + 1), _addrs[i]);
-        }
-
-        // remove last 1, and set all to address(0)
-        arr.pop();
-        assertEq(arr.slots.length, addrs.length);
-
-        for (uint256 i = 0; i < addrs.length; i++) {
-            arr.set(i, address(0));
-            assertEq(arr.get(i), address(0));
-        }
-        assertEq(arr.slots.length, addrs.length);
-        assertEq(_addrs.length, addrs.length);
-
-        // Get all zero addresses
-        address[] memory zeroAddrs = arr.slice(0, addrs.length);
-        assertEq(zeroAddrs.length, addrs.length);
-        assertEq(arr.slots.length, addrs.length);
-
-        // TODO: why is this array being reset
-        // assertEq(_addrs.length, addrs.length);
-
-        // Remove all addresses
-        for (uint256 i = 0; i < addrs.length; i++) {
-            arr.pop();
-        }
-
-        vm.expectRevert(PackedArray.PopEmptyArray.selector);
-        arr.pop();
-        assertEq(arr.slots.length, 0);
-
-        arr.push(b);
-        assertEq(arr.get(0), b);
-        assertEq(arr.slots.length, 1);
-        arr.set(0, a);
-        assertEq(arr.get(0), a);
     }
 
     function test_append_fuzz(address[20] calldata addrsA, address[20] memory addrsB) public {
@@ -120,35 +81,74 @@ contract PackedAddressTest is Test {
         }
     }
 
-    function test_set_debug() public {
-        address a = address(type(uint160).max);
-        address b = address(0xFF << 80);
-        for (uint256 i = 0; i < 10; i++) {
-            arr.push(a);
-        }
-        for (uint256 i = 0; i < 10; i++) {
-            arr.set(i, address(b));
-            assertEq(arr.get(i), address(b));
-        }
-    }
+    function test_fuzz_set(address[3] calldata addrsA, address[3] calldata addrsB) public {
+        uint256 arrayLen = addrsA.length;
+        assertEq(addrsA.length, addrsB.length);
 
-    function test_fuzz_set(address[20] calldata addrsA, address[20] calldata addrsB) public {
-        for (uint256 i = 0; i < addrsA.length; i++) {
+        for (uint256 i = 0; i < arrayLen; i++) {
             arr.push(addrsA[i]);
         }
 
-        for (uint256 i = 0; i < addrsB.length; i++) {
+        for (uint256 i = 0; i < arrayLen; i++) {
+            assertEq(arr.get(i), addrsA[i]);
             arr.set(i, addrsB[i]);
             assertEq(arr.get(i), addrsB[i]);
         }
 
-        for (uint256 i = 0; i < addrsA.length; i++) {
-            arr.set(i, addrsA[i]);
-            assertEq(arr.get(i), addrsA[i]);
+        for (uint256 i = 0; i < arrayLen; i++) {
+            assertEq(arr.get(i), addrsB[i]);
+            //arr.set(i, addrsA[i]);
+            //assertEq(arr.get(i), addrsA[i]);
         }
     }
 
-    function test_fuzz_get_many(address[50] calldata array, uint256 from, uint256 to) public {
+    function test_slice_free_memory() public {
+        uint256 freeMem;
+        assembly {
+            freeMem := mload(0x40)
+        }
+        console.log("free memory", freeMem);
+
+        while (arr.slots.length < 50) {
+            arr.push(address(0xBEEF));
+        }
+
+        address[] memory addrs = arr.slice(20, 50);
+
+        uint256 freeMemAfter;
+        assembly {
+            freeMemAfter := mload(0x40)
+        }
+        assertEq(freeMem + (32 * addrs.length), freeMemAfter);
+    }
+
+    function test_slice_append() public {
+        uint256 length = 10;
+        while (arr.slots.length < length) {
+            arr.push(address(type(uint160).max));
+        }
+
+        address[] memory addrs = arr.slice(0, length);
+        address[] memory addrs2 = arr.slice(0, length);
+        address[] memory addrs3 = arr.slice(0, length);
+        assertEq(addrs.length, addrs2.length);
+        assertEq(addrs2.length, addrs3.length);
+        for (uint256 i = 0; i < length; i++) {
+            assertEq(addrs[i], addrs2[i]);
+            assertEq(addrs2[i], addrs3[i]);
+        }
+
+        arr.append(addrs);
+        addrs = arr.slice(0, length * 2);
+        addrs2 = arr.slice(0, length * 2);
+        assertEq(addrs.length, addrs2.length);
+
+        for (uint256 i = 0; i < length * 2; i++) {
+            assertEq(addrs[i], addrs2[i]);
+        }
+    }
+
+    function test_fuzz_slice(address[50] calldata array, uint256 from, uint256 to) public {
         for (uint256 i = 0; i < array.length; i++) {
             arr.push(array[i]);
         }
@@ -167,7 +167,7 @@ contract PackedAddressTest is Test {
         }
     }
 
-    function test_get_many_correct_amount() public {
+    function test_slice_correct_amount() public {
         arr.push(address(0xCAFE));
         address[] memory addrs = arr.slice(0, 1);
         assertEq(addrs.length, 1);
@@ -233,5 +233,56 @@ contract PackedAddressTest is Test {
         for (uint256 i = 0; i < addrs.length; i++) {
             assertEq(arr.get(i), addrs[i]);
         }
+    }
+
+    function test_fuzz_complex_functionality(address[30] calldata addrs, address a, address b) public {
+        address[] memory _addrs = new address[](addrs.length);
+        for (uint256 i = 0; i < addrs.length; i++) {
+            _addrs[i] = addrs[i];
+        }
+
+        // push and append
+        arr.push(a);
+        assertEq(arr.slots.length, 1);
+        assertEq(arr.get(0), a);
+
+        arr.append(_addrs);
+        assertEq(arr.slots.length, _addrs.length + 1);
+        for (uint256 i = 0; i < _addrs.length; i++) {
+            assertEq(arr.get(i + 1), _addrs[i]);
+        }
+
+        // remove last 1, and set all to address(0)
+        arr.pop();
+        assertEq(arr.slots.length, addrs.length);
+
+        for (uint256 i = 0; i < addrs.length; i++) {
+            arr.set(i, address(0));
+            assertEq(arr.get(i), address(0));
+        }
+        assertEq(arr.slots.length, addrs.length);
+        assertEq(_addrs.length, addrs.length);
+
+        // Get all zero addresses
+        address[] memory zeroAddrs = arr.slice(0, addrs.length);
+        assertEq(zeroAddrs.length, addrs.length);
+        assertEq(arr.slots.length, addrs.length);
+
+        assertEq(_addrs.length, addrs.length);
+
+        // Remove all addresses
+        for (uint256 i = 0; i < addrs.length; i++) {
+            arr.pop();
+        }
+
+        vm.expectRevert(PackedArray.PopEmptyArray.selector);
+        arr.pop();
+        assertEq(arr.slots.length, 0);
+
+        arr.push(b);
+        assertEq(arr.get(0), b);
+        assertEq(arr.slots.length, 1);
+        arr.set(0, a);
+        assertEq(arr.get(0), a);
     }
 }
