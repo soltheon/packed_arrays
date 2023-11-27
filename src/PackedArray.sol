@@ -41,7 +41,7 @@ library PackedArray {
                     cachedStorageValue := shl(sub(256, sliceLength), value)
                 }
                 default {
-                    // If the offset is less than 96, we can fit the whole address in the slot
+                    // Store the whole address after the offset
                     cachedStorageValue := or(cachedStorageValue, shl(sub(96, offset), value))
                 }
 
@@ -55,6 +55,7 @@ library PackedArray {
                 }
             }
 
+            // If there are remaining bits in the last slot, update storage
             if gt(cachedStorageValue, 0) { sstore(storageSlotIndex, cachedStorageValue) }
 
             // Increment array

@@ -97,8 +97,8 @@ contract PackedAddressTest is Test {
 
         for (uint256 i = 0; i < arrayLen; i++) {
             assertEq(arr.get(i), addrsB[i]);
-            //arr.set(i, addrsA[i]);
-            //assertEq(arr.get(i), addrsA[i]);
+            arr.set(i, addrsA[i]);
+            assertEq(arr.get(i), addrsA[i]);
         }
     }
 
@@ -107,7 +107,6 @@ contract PackedAddressTest is Test {
         assembly {
             freeMem := mload(0x40)
         }
-        console.log("free memory", freeMem);
 
         while (arr.slots.length < 50) {
             arr.push(address(0xBEEF));

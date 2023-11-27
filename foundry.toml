@@ -165,7 +165,7 @@ runs = 256
 # The number of calls executed to attempt to break invariants in one run
 depth = 15
 # Fails the invariant fuzzing if a revert occurs
-fail_on_revert = false
+fail_on_revert = true
 # Allows overriding an unsafe external call when running invariant tests. eg. reentrancy checks
 call_override = false
 # The weight of the dictionary
